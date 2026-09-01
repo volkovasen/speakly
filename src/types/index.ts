@@ -1,5 +1,4 @@
-export type CEFRLevel = "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-
+export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 export type NativeLanguage = "ru" | "en" | "de";
 export type TargetLanguage = "en" | "de";
 
@@ -48,8 +47,7 @@ export type FavoriteTopic =
   | "media"
   | "slang"
   | "film"
-  | "looks"
-  | (string & {});
+  | "looks";
 
 export type SpecializedTrack =
   | "business"
@@ -77,6 +75,19 @@ export interface OnboardingState {
   tutorPersonality: AITutorPersonality | null;
   favoriteTopics: FavoriteTopic[];
 }
+
+export type Course = {
+  id: string;
+  nativeLanguage: NativeLanguage;
+  targetLanguage: TargetLanguage;
+  assessedLevel: CEFRLevel | null;
+  dailyGoalMinutes: DailyGoalMinutes;
+  courseDuration: CourseDuration;
+  tutorPersonality: AITutorPersonality;
+  favoriteTopics: FavoriteTopic[];
+  goals: LearningGoal[];
+  createdAt: number;
+};
 
 export interface LevelTestQuestion {
   id: string;

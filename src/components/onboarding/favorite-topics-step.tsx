@@ -12,7 +12,7 @@ interface FavoriteTopicsStepProps {
 }
 
 export function FavoriteTopicsStep({ selected, onToggle, onContinue }: FavoriteTopicsStepProps) {
-  const isValid = selected.length >= 2 && selected.length <= 5;
+  const isValid = selected.length >= 3 && selected.length <= 5;
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col px-6 py-6">
@@ -28,7 +28,7 @@ export function FavoriteTopicsStep({ selected, onToggle, onContinue }: FavoriteT
           Расскажи о своих интересах
         </h2>
         <p className="mt-2 text-muted-foreground">
-          Выбери от 2 до 5 тем для персонализации контента. Это помогает нам подобрать примеры и упражнения, которые тебе нравятся.
+          Выбери от 3 до 5 тем для персонализации контента. Это помогает нам подобрать примеры и упражнения, которые тебе нравятся.
         </p>
         {selected.length > 0 && (
           <p className="mt-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
@@ -41,7 +41,7 @@ export function FavoriteTopicsStep({ selected, onToggle, onContinue }: FavoriteT
         <div className="flex flex-wrap gap-2">
           {FAVORITE_TOPICS.map((topic, i) => {
             const isSelected = selected.includes(topic.id);
-            const canDeselect = selected.length > 2;
+            const canDeselect = selected.length > 3;
             const canSelect = selected.length < 5;
             const isDisabled = !isSelected && !canSelect;
 
@@ -76,7 +76,7 @@ export function FavoriteTopicsStep({ selected, onToggle, onContinue }: FavoriteT
 
       <div className="pt-6">
         <p className="mb-3 text-xs text-muted-foreground">
-          * Выбор интересов необязателен и может быть обновлён позже
+          * Выбери минимум 3 темы, чтобы продолжить
         </p>
         <Button
           size="xl"

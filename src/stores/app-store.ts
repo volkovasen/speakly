@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type {
   AITutorPersonality,
   CEFRLevel,
+  Course,
   CourseDuration,
   DailyGoalMinutes,
   FavoriteTopic,
@@ -32,6 +33,9 @@ const initialOnboarding: OnboardingState = {
 interface AppStore {
   theme: "light" | "dark" | "system";
   onboarding: OnboardingState;
+  courses: Course[];
+  activeCourseId: string | null;
+
   setTheme: (theme: "light" | "dark" | "system") => void;
   setOnboardingStep: (step: number) => void;
   nextStep: () => void;
@@ -48,6 +52,9 @@ interface AppStore {
   toggleFavoriteTopic: (topic: FavoriteTopic) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
+  updateOnboarding: (data: Partial<OnboardingState>) => void;
+  addCourse: (data: Omit<Course, "id" | "createdAt">) => void;
+  setActiveCourse: (id: string) => void;
 }
 
 export const useAppStore = create<AppStore>()(
@@ -55,6 +62,8 @@ export const useAppStore = create<AppStore>()(
     (set) => ({
       theme: "system",
       onboarding: initialOnboarding,
+      courses: [],
+      activeCourseId: null,
 
       setTheme: (theme) => set({ theme }),
 
@@ -146,17 +155,101 @@ export const useAppStore = create<AppStore>()(
         }),
 
       completeOnboarding: () =>
+        set((state) => {
+          const o = state.onboarding;
+          // создаём первый курс из онбординга, если курсов ещё нет
+          if (
+            state.courses.length === 0 &&
+            o.targetLanguage &&
+            o.dailyGoalMinutes &&
+            o.courseDuration &&
+            o.tutorPersonality
+          ) {
+            const id = `course_${Date.now()}`;
+            const course: Course = {
+              id,
+              nativeLanguage: o.nativeLanguage ?? "ru",
+              targetLanguage: o.targetLanguage,
+              assessedLevel: o.assessedLevel,
+              dailyGoalMinutes: o.dailyGoalMinutes,
+              courseDuration: o.courseDuration,
+              tutorPersonality: o.tutorPersonality,
+              favoriteTopics: o.favoriteTopics,
+              goals: o.goals,
+              createdAt: Date.now(),
+            };
+            return {
+              onboarding: { ...o, isComplete: true },
+              courses: [course],
+              activeCourseId: id,
+            };
+          }
+          return {
+            onboarding: { ...o, isComplete: true },
+          };
+        }),
+
+      resetOnboarding: () =>
+        set({
+          onboarding: initialOnboarding,
+          courses: [],
+          activeCourseId: null,
+        }),
+
+      updateOnboarding: (data) =>
         set((state) => ({
-          onboarding: { ...state.onboarding, isComplete: true },
+          onboarding: { ...state.onboarding, ...data },
         })),
 
-      resetOnboarding: () => set({ onboarding: initialOnboarding }),
+      addCourse: (data) =>
+        set((state) => {
+          const id = `course_${Date.now()}`;
+          const course: Course = { ...data, id, createdAt: Date.now() };
+          return {
+            courses: [...state.courses, course],
+            activeCourseId: id,
+            onboarding: {
+              ...state.onboarding,
+              nativeLanguage: data.nativeLanguage,
+              targetLanguage: data.targetLanguage,
+              assessedLevel: data.assessedLevel,
+              dailyGoalMinutes: data.dailyGoalMinutes,
+              courseDuration: data.courseDuration,
+              tutorPersonality: data.tutorPersonality,
+              favoriteTopics: data.favoriteTopics,
+              goals: data.goals,
+              isComplete: true,
+            },
+          };
+        }),
+
+      setActiveCourse: (id) =>
+        set((state) => {
+          const course = state.courses.find((c) => c.id === id);
+          if (!course) return state;
+          return {
+            activeCourseId: id,
+            onboarding: {
+              ...state.onboarding,
+              nativeLanguage: course.nativeLanguage,
+              targetLanguage: course.targetLanguage,
+              assessedLevel: course.assessedLevel,
+              dailyGoalMinutes: course.dailyGoalMinutes,
+              courseDuration: course.courseDuration,
+              tutorPersonality: course.tutorPersonality,
+              favoriteTopics: course.favoriteTopics,
+              goals: course.goals,
+            },
+          };
+        }),
     }),
     {
       name: "speakly-storage",
       partialize: (state) => ({
         theme: state.theme,
         onboarding: state.onboarding,
+        courses: state.courses,
+        activeCourseId: state.activeCourseId,
       }),
     }
   )

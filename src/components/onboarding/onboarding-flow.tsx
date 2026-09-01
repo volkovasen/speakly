@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { WelcomeStep } from "./welcome-step";
 import { LanguagePairStep } from "./language-pair-step";
 import { LevelTestStep } from "./level-test-step";
 import { LevelTestPromptStep } from "./level-test-prompt-step";
+import { UploadTestResultsStep } from "./upload-test-results-step";
 import { GoalsStep } from "./goals-step";
 import { PreferencesStep } from "./preferences-step";
 import { FavoriteTopicsStep } from "./favorite-topics-step";
@@ -14,6 +15,8 @@ import { useAppStore, ONBOARDING_STEPS } from "@/stores/app-store";
 import { getTelegramUser, haptic, getNativeLanguageFromTelegram } from "@/lib/telegram";
 import { getLevelTestQuestions } from "@/data/onboarding";
 import type { CEFRLevel } from "@/types";
+
+type AssessmentMode = "quick" | "full" | "upload" | "skipped" | null;
 
 export function OnboardingFlow() {
   const {
@@ -31,12 +34,13 @@ export function OnboardingFlow() {
     completeOnboarding,
   } = useAppStore();
 
+  const [assessmentMode, setAssessmentMode] = useState<AssessmentMode>(null);
+
   const user = getTelegramUser();
   const step = onboarding.currentStep;
   const showBack = step > 0 && step < ONBOARDING_STEPS;
   const showProgress = step > 0 && step < ONBOARDING_STEPS;
 
-  // Auto-detect and set native language from Telegram on first render
   useEffect(() => {
     if (!onboarding.nativeLanguage) {
       const detectedLanguage = getNativeLanguageFromTelegram();
@@ -44,13 +48,33 @@ export function OnboardingFlow() {
     }
   }, []);
 
-  const handleBack = () => {
-    haptic("light");
-    prevStep();
-  };
+const handleBack = () => {
+  haptic("light");
+
+  // Если пришли с "Пройти позже" на Preferences — возвращаемся сразу на выбор теста
+  if (step === 4 && assessmentMode === "skipped") {
+    setAssessmentMode(null);
+    prevStep(); // 4 → 3
+    prevStep(); // 3 → 2
+    return;
+  }
+
+  if (step === 3) {
+    setAssessmentMode(null);
+  }
+
+  prevStep();
+};
 
   const handleLevelComplete = (level: CEFRLevel, score: number) => {
     setAssessedLevel(level, score);
+  };
+
+  const handleUploadComplete = (level: CEFRLevel, source: string) => {
+    // score = 0, потому что это не наш тест, а внешний результат
+    setAssessedLevel(level, 0);
+    setAssessmentMode(null);
+    nextStep(); // переходим к Preferences
   };
 
   const renderStep = () => {
@@ -62,36 +86,72 @@ export function OnboardingFlow() {
             onContinue={nextStep}
           />
         );
+
       case 1:
         return (
           <LanguagePairStep
             nativeLanguage={onboarding.nativeLanguage}
             targetLanguage={onboarding.targetLanguage}
+            onSelectNative={setNativeLanguage}
             onSelectTarget={setTargetLanguage}
             onContinue={nextStep}
           />
         );
-      case 2:
-        return (
-          <LevelTestPromptStep
-            onStart={() => nextStep()}
-            onSkip={() => {
-              // Skip test and move to next step (Goals)
-              nextStep();
-              nextStep();
-            }}
-          />
-        );
-      case 3:
-        return (
-          <LevelTestStep
-            answers={onboarding.levelTestAnswers}
-            questions={getLevelTestQuestions(onboarding.targetLanguage)}
-            onAnswer={setLevelTestAnswer}
-            onComplete={handleLevelComplete}
-            onContinue={nextStep}
-          />
-        );
+
+case 2:
+  return (
+    <LevelTestPromptStep
+      onStartQuick={() => {
+        setAssessmentMode("quick");
+        nextStep();
+      }}
+      onStartFull={() => {
+        setAssessmentMode("full");
+        nextStep();
+      }}
+      onUploadResults={() => {
+        setAssessmentMode("upload");
+        nextStep();
+      }}
+onSkip={() => {
+  setAssessmentMode("skipped");
+  nextStep(); // → 3
+  nextStep(); // → 4
+}}
+    />
+  );
+
+case 3:
+  if (assessmentMode === "upload") {
+    return (
+      <UploadTestResultsStep
+        onComplete={handleUploadComplete}
+        onBack={() => {
+          setAssessmentMode(null);
+          prevStep();
+        }}
+      />
+    );
+  }
+
+  if (assessmentMode === "quick" || assessmentMode === "full") {
+    return (
+      <LevelTestStep
+        answers={onboarding.levelTestAnswers}
+        questions={getLevelTestQuestions(
+          onboarding.targetLanguage,
+          assessmentMode === "quick" ? "quick" : "full"
+        )}
+        onAnswer={setLevelTestAnswer}
+        onComplete={handleLevelComplete}
+        onContinue={nextStep}
+      />
+    );
+  }
+
+  // Сюда не должны попадать (skipped / null)
+  return null;
+
       case 4:
         return (
           <PreferencesStep
@@ -102,6 +162,7 @@ export function OnboardingFlow() {
             onContinue={nextStep}
           />
         );
+
       case 5:
         return (
           <FavoriteTopicsStep
@@ -110,6 +171,7 @@ export function OnboardingFlow() {
             onContinue={nextStep}
           />
         );
+
       case 6:
         return (
           <GoalsStep
@@ -118,6 +180,7 @@ export function OnboardingFlow() {
             onContinue={nextStep}
           />
         );
+
       case 7:
         return (
           <PlanReadyStep
@@ -125,6 +188,7 @@ export function OnboardingFlow() {
             onFinish={completeOnboarding}
           />
         );
+
       default:
         return null;
     }
@@ -158,7 +222,7 @@ export function OnboardingFlow() {
       <main className="mx-auto max-w-lg">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step}
+            key={`${step}-${assessmentMode}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

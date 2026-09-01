@@ -27,7 +27,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "afternoon", isCorrect: false },
       { id: "d", label: "evening", isCorrect: false },
     ],
-    explanation: "'Good morning' is a common greeting used before noon.",
+    explanation: "«Good morning» — распространённое приветствие, которое используют до полудня.",
   },
   {
     id: "q3",
@@ -40,7 +40,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "going", isCorrect: false },
       { id: "d", label: "gone", isCorrect: false },
     ],
-    explanation: "Third person singular takes '-s': she goes.",
+    explanation: "В 3-м лице единственного числа к глаголу добавляется окончание -s: she goes.",
   },
   {
     id: "q4",
@@ -53,7 +53,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "To finish early", isCorrect: false },
       { id: "d", label: "To start immediately", isCorrect: false },
     ],
-    explanation: "'Postpone' means to arrange for something to happen at a later time.",
+    explanation: "«Postpone» значит отложить что-то на более поздний срок.",
   },
   {
     id: "q5",
@@ -66,7 +66,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "will have", isCorrect: false },
       { id: "d", label: "would have", isCorrect: false },
     ],
-    explanation: "Third conditional uses past perfect in the if-clause: If I had...",
+    explanation: "В третьем условном предложении в if-части используется Past Perfect: If I had...",
   },
   {
     id: "q6",
@@ -79,7 +79,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "The board ignored it", isCorrect: false },
       { id: "d", label: "The board revised it", isCorrect: false },
     ],
-    explanation: "'Skepticism' means doubt or disbelief.",
+    explanation: "«Skepticism» означает сомнение или недоверие.",
   },
   {
     id: "q7",
@@ -92,7 +92,7 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "Essential", isCorrect: false },
       { id: "d", label: "Abundant", isCorrect: false },
     ],
-    explanation: "'Ephemeral' means lasting for a very short time.",
+    explanation: "«Ephemeral» значит длящийся очень короткое время, мимолётный.",
   },
 ];
 
@@ -122,7 +122,7 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "vielen", isCorrect: false },
       { id: "d", label: "viele", isCorrect: false },
     ],
-    explanation: "Im Deutschen steht 'viel Appetit' für große Lust zu essen.",
+    explanation: "В немецком говорят «viel Appetit» — «большой аппетит».",
   },
   {
     id: "q3",
@@ -135,7 +135,7 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "fahren", isCorrect: false },
       { id: "d", label: "gefahren", isCorrect: false },
     ],
-    explanation: "'Er fährt' ist die korrekte dritte Person Singular.",
+    explanation: "«Er fährt» — правильная форма 3-го лица единственного числа глагола fahren.",
   },
   {
     id: "q4",
@@ -148,7 +148,7 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "etwas schneller machen", isCorrect: false },
       { id: "d", label: "etwas beenden", isCorrect: false },
     ],
-    explanation: "'Verschieben' bedeutet, einen Termin auf später zu legen.",
+    explanation: "«Verschieben» значит отложить что-то на более поздний срок.",
   },
   {
     id: "q5",
@@ -161,7 +161,7 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "habe", isCorrect: false },
       { id: "d", label: "hatte", isCorrect: false },
     ],
-    explanation: "Der dritte Konditional verwendet 'hätte' im Nebensatz.",
+    explanation: "В третьем условном предложении (Konjunktiv II) в придаточном используется «hätte».",
   },
   {
     id: "q6",
@@ -174,7 +174,7 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "Der Vorschlag wurde ignoriert.", isCorrect: false },
       { id: "d", label: "Der Vorschlag wurde geändert.", isCorrect: false },
     ],
-    explanation: "'Skepsis' bedeutet Zweifel oder kritische Haltung.",
+    explanation: "«Skepsis» означает сомнение или критическое отношение.",
   },
   {
     id: "q7",
@@ -187,16 +187,30 @@ const GERMAN_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
       { id: "c", label: "wichtig", isCorrect: false },
       { id: "d", label: "reichlich", isCorrect: false },
     ],
-    explanation: "'Vergänglich' bedeutet, dass etwas nur kurz dauert.",
+    explanation: "«Vergänglich» значит недолговечный, мимолётный.",
   },
 ];
 
-export function getLevelTestQuestions(targetLanguage: TargetLanguage | null): LevelTestQuestion[] {
-  if (targetLanguage === "de") {
-    return GERMAN_LEVEL_TEST_QUESTIONS;
+export type LevelTestMode = "quick" | "full";
+
+export function getLevelTestQuestions(
+  targetLanguage: TargetLanguage | null,
+  mode: LevelTestMode = "full"
+): LevelTestQuestion[] {
+  const all =
+    targetLanguage === "de"
+      ? GERMAN_LEVEL_TEST_QUESTIONS
+      : ENGLISH_LEVEL_TEST_QUESTIONS;
+
+  if (mode === "quick") {
+    // Быстрая проверка: самооценка + 3 вопроса разной сложности
+    return all.filter((q) =>
+      ["q1", "q2", "q4", "q6"].includes(q.id)
+    );
   }
 
-  return ENGLISH_LEVEL_TEST_QUESTIONS;
+  // Полная проверка — все вопросы
+  return all;
 }
 
 export function calculateAssessedLevel(

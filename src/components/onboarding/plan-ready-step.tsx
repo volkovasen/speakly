@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CEFR_LEVELS, haptic } from "@/lib/telegram";
+import { LEARNING_GOALS } from "@/data/onboarding";
 import type { OnboardingState } from "@/types";
 
 interface PlanReadyStepProps {
@@ -39,6 +40,13 @@ export function PlanReadyStep({ onboarding, onFinish }: PlanReadyStepProps) {
   }, [phase]);
 
   const levelInfo = CEFR_LEVELS.find((l) => l.level === onboarding.assessedLevel);
+
+  const goalsText =
+    onboarding.goals.length > 0
+      ? onboarding.goals
+          .map((id) => LEARNING_GOALS.find((g) => g.id === id)?.label ?? id)
+          .join(", ")
+      : "Не указана";
 
   if (phase === "loading") {
     return (
@@ -93,23 +101,30 @@ export function PlanReadyStep({ onboarding, onFinish }: PlanReadyStepProps) {
 
         <h2 className="text-2xl font-bold">Твой план готов!</h2>
         <p className="mt-2 max-w-xs text-muted-foreground">
-          Персональное путешествие на {onboarding.courseDuration} дней на уровне{" "}
-          {onboarding.assessedLevel}.
+          {onboarding.assessedLevel
+            ? `Персональный план на уровне ${onboarding.assessedLevel}${
+                levelInfo ? ` · ${levelInfo.label}` : ""
+              }.`
+            : "Персональный план обучения готов."}
         </p>
 
         <div className="mt-8 w-full max-w-sm space-y-3">
           {[
-            { label: "Уровень", value: `${onboarding.assessedLevel} · ${levelInfo?.label}` },
             {
-              label: "Ежедневная цель",
-              value: `${onboarding.dailyGoalMinutes} минут`,
+              label: "Уровень",
+              value: onboarding.assessedLevel
+                ? `${onboarding.assessedLevel}${levelInfo ? ` · ${levelInfo.label}` : ""}`
+                : "Не определён",
             },
             {
-              label: "Фокус",
-              value: onboarding.prioritySkills
-                .slice(0, 2)
-                .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                .join(", "),
+              label: "Ежедневная цель",
+              value: onboarding.dailyGoalMinutes
+                ? `${onboarding.dailyGoalMinutes} минут`
+                : "Не указана",
+            },
+            {
+              label: "Цель обучения",
+              value: goalsText,
             },
           ].map((item, i) => (
             <motion.div
@@ -120,7 +135,9 @@ export function PlanReadyStep({ onboarding, onFinish }: PlanReadyStepProps) {
               className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-soft"
             >
               <span className="text-sm text-muted-foreground">{item.label}</span>
-              <span className="text-sm font-semibold">{item.value}</span>
+              <span className="text-sm font-semibold text-right max-w-[60%]">
+                {item.value}
+              </span>
             </motion.div>
           ))}
         </div>
