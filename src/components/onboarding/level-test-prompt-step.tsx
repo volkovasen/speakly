@@ -65,7 +65,7 @@ export function LevelTestPromptStep({
               onUploadResults();
             }}
           >
-            Загрузить результаты теста
+            Указать результат
           </Button>
 
           <Button

@@ -123,6 +123,12 @@ export function PlanReadyStep({ onboarding, onFinish }: PlanReadyStepProps) {
                 : "Не указана",
             },
             {
+              label: "Длительность курса",
+              value: onboarding.courseDuration
+                ? `${onboarding.courseDuration} дней`
+                : "Не указана",
+            },
+            {
               label: "Цель обучения",
               value: goalsText,
             },

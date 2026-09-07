@@ -5,11 +5,6 @@ import {
   Mic,
   BookOpen,
   BarChart3,
-  Flame,
-  Flag,
-  Lock,
-  TrendingUp,
-  ArrowRight,
   Plus,
   X,
   Clock,
@@ -39,14 +34,6 @@ import type {
   FavoriteTopic,
   LearningGoal,
 } from "@/types";
-
-import { LevelTestStep } from "@/components/onboarding/level-test-step";
-import { UploadTestResultsStep } from "@/components/onboarding/upload-test-results-step";
-import { getLevelTestQuestions } from "@/data/onboarding";
-
-// в компоненте:
-const { onboarding, resetOnboarding, updateOnboarding, addCourse, courses, setActiveCourse } =
-  useAppStore();
 
 const NATIVE_OPTIONS: { value: NativeLanguage; label: string }[] = [
   { value: "ru", label: "Русский" },
@@ -83,10 +70,8 @@ export function HomeScreen() {
     TARGET_OPTIONS.find((t) => t.value === onboarding.targetLanguage)?.label ??
     "Язык";
 
-  const dailyMinutes = onboarding.dailyGoalMinutes ?? 15;
-  const courseDays = onboarding.courseDuration ?? 60;
-  const streak = 0;
-  const progressPercent = 0;
+  const dailyMinutes = onboarding.dailyGoalMinutes;
+  const courseDays = onboarding.courseDuration;
 
   // ── Edit modal ──────────────────────────────────────
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -278,13 +263,10 @@ export function HomeScreen() {
             className="h-10 w-10 rounded-full object-cover ring-2 ring-border"
           />
         </div>
-        <div className="mt-5 flex gap-2">
-          <button className="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm">
-            Курсы
-          </button>
-          <button className="rounded-full border border-border bg-card px-5 py-2 text-sm font-medium text-muted-foreground">
-            План обучения
-          </button>
+        <div className="mt-5">
+          <span className="inline-flex rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-sm">
+            Текущий курс
+          </span>
         </div>
       </header>
 
@@ -317,36 +299,18 @@ export function HomeScreen() {
           </div>
 
           <div className="mt-5">
-            <p className="text-sm text-muted-foreground">
-              {progressPercent}% выполнено
-            </p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-orange-500 transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-5 flex items-center justify-between gap-3">
             <div className="inline-flex items-center gap-2">
-              <div className="rounded-full border border-border bg-background px-3.5 py-2 text-sm font-semibold">
-                {dailyMinutes} мин
-              </div>
-              <div className="rounded-full border border-border bg-background px-3.5 py-2 text-sm font-semibold">
-                {courseDays} дней
-              </div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 px-3.5 py-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
-                <Flame className="h-4 w-4" />
-                {streak}
-              </div>
+              {dailyMinutes && (
+                <div className="rounded-full border border-border bg-background px-3.5 py-2 text-sm font-semibold">
+                  {dailyMinutes} мин в день
+                </div>
+              )}
+              {courseDays && (
+                <div className="rounded-full border border-border bg-background px-3.5 py-2 text-sm font-semibold">
+                  {courseDays} дней
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => haptic("light")}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white shadow-sm transition active:scale-95"
-            >
-              <ArrowRight className="h-5 w-5" />
-            </button>
           </div>
         </motion.div>
 
@@ -363,94 +327,6 @@ export function HomeScreen() {
             <Plus className="h-5 w-5" />
           </div>
         </motion.button>
-
-        {/* Weekly goal banner */}
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          onClick={() => haptic("light")}
-          className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left shadow-soft transition active:scale-[0.99]"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500/10">
-            <Flag className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          </div>
-          <span className="text-sm font-medium text-muted-foreground">
-            Установи недельную цель!
-          </span>
-        </motion.button>
-
-        {/* Assess card */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="relative overflow-hidden rounded-3xl bg-[#D4C4F5] p-5 dark:bg-indigo-950/60"
-        >
-          <div className="relative z-10 max-w-[65%]">
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-700/70 dark:text-indigo-300">
-              Оценка
-            </p>
-            <h2 className="mt-2 text-xl font-bold leading-snug text-foreground">
-              {hasLevel
-                ? `Твой уровень: ${onboarding.assessedLevel}`
-                : "Ответь на несколько вопросов, чтобы узнать уровень"}
-            </h2>
-            {hasLevel && levelInfo && (
-              <p className="mt-1 text-sm text-indigo-800/70 dark:text-indigo-300">
-                {levelInfo.label}
-              </p>
-            )}
-            <button
-              onClick={() => haptic("selection")}
-              className="mt-5 rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition active:scale-95"
-            >
-              {hasLevel ? "Пройти снова" : "Узнать уровень"}
-            </button>
-          </div>
-          <div className="absolute -right-2 bottom-2 flex h-28 w-28 items-center justify-center rounded-full bg-white/30 dark:bg-white/10">
-            <TrendingUp className="h-12 w-12 text-indigo-600/80 dark:text-indigo-300" />
-          </div>
-        </motion.div>
-
-        {/* Lessons grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              title: "Урок 1",
-              subtitle: "Приветствия · Часть 1",
-              color: "bg-[#F5E6A3] dark:bg-yellow-950/40",
-              locked: false,
-            },
-            {
-              title: "Урок 2",
-              subtitle: "Приветствия · Часть 2",
-              color: "bg-[#A8E6CF] dark:bg-emerald-950/40",
-              locked: true,
-            },
-          ].map((lesson, i) => (
-            <motion.button
-              key={lesson.title}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12 + i * 0.05 }}
-              onClick={() => haptic("light")}
-              className={`relative rounded-3xl p-4 text-left transition active:scale-[0.98] ${lesson.color}`}
-            >
-              <div className="flex items-start justify-between">
-                <p className="text-sm font-semibold text-foreground/80">
-                  {lesson.title}
-                </p>
-                {lesson.locked && (
-                  <Lock className="h-4 w-4 text-foreground/40" />
-                )}
-              </div>
-              <p className="mt-6 text-base font-bold leading-snug text-foreground">
-                {lesson.subtitle}
-              </p>
-            </motion.button>
-          ))}
-        </div>
 
         <button
           onClick={resetOnboarding}
@@ -469,7 +345,7 @@ export function HomeScreen() {
             { icon: BookOpen, label: "Уроки", active: false },
             { icon: BarChart3, label: "Прогресс", active: false },
           ].map(({ icon: Icon, label, active }) => (
-            <button
+            <div
               key={label}
               className={`flex flex-col items-center gap-1 px-3 py-1 ${
                 active ? "text-orange-500" : "text-muted-foreground"
@@ -482,8 +358,10 @@ export function HomeScreen() {
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <span className="text-[10px] font-medium">{label}</span>
-            </button>
+              <span className="text-[10px] font-medium">
+                {active ? label : `${label} · скоро`}
+              </span>
+            </div>
           ))}
         </div>
       </nav>
@@ -1249,4 +1127,3 @@ export function HomeScreen() {
     </div>
   );
 }
-

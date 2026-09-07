@@ -1,6 +1,22 @@
-export type CEFRLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+export type CEFRLevel = "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 export type NativeLanguage = "ru" | "en" | "de";
 export type TargetLanguage = "en" | "de";
+
+export type AssessmentMode = "quick" | "full" | "external" | "skipped" | null;
+
+export type ExternalTestSource =
+  | "ielts"
+  | "toefl"
+  | "cambridge"
+  | "duolingo"
+  | "cefr"
+  | "other";
+
+export interface ExternalTestResult {
+  source: ExternalTestSource;
+  rawScore: string;
+  cefrLevel: CEFRLevel;
+}
 
 export type LearningGoal =
   | "general"
@@ -68,6 +84,8 @@ export interface OnboardingState {
   selfReportedLevel: CEFRLevel | null;
   levelTestAnswers: Record<string, string>;
   levelTestScore: number;
+  assessmentMode: AssessmentMode;
+  externalTestResult: ExternalTestResult | null;
   goals: LearningGoal[];
   prioritySkills: PrioritySkill[];
   dailyGoalMinutes: DailyGoalMinutes | null;

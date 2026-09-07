@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { WelcomeStep } from "./welcome-step";
 import { LanguagePairStep } from "./language-pair-step";
@@ -14,9 +14,7 @@ import { ProgressBar } from "./progress-bar";
 import { useAppStore, ONBOARDING_STEPS } from "@/stores/app-store";
 import { getTelegramUser, haptic, getNativeLanguageFromTelegram } from "@/lib/telegram";
 import { getLevelTestQuestions } from "@/data/onboarding";
-import type { CEFRLevel } from "@/types";
-
-type AssessmentMode = "quick" | "full" | "upload" | "skipped" | null;
+import type { AssessmentMode, CEFRLevel, ExternalTestResult } from "@/types";
 
 export function OnboardingFlow() {
   const {
@@ -29,15 +27,16 @@ export function OnboardingFlow() {
     setAssessedLevel,
     toggleGoal,
     setDailyGoalMinutes,
+    setCourseDuration,
     setTutorPersonality,
     toggleFavoriteTopic,
     completeOnboarding,
+    updateOnboarding,
   } = useAppStore();
-
-  const [assessmentMode, setAssessmentMode] = useState<AssessmentMode>(null);
 
   const user = getTelegramUser();
   const step = onboarding.currentStep;
+  const assessmentMode = onboarding.assessmentMode;
   const showBack = step > 0 && step < ONBOARDING_STEPS;
   const showProgress = step > 0 && step < ONBOARDING_STEPS;
 
@@ -46,35 +45,55 @@ export function OnboardingFlow() {
       const detectedLanguage = getNativeLanguageFromTelegram();
       setNativeLanguage(detectedLanguage);
     }
-  }, []);
+  }, [onboarding.nativeLanguage, setNativeLanguage]);
 
-const handleBack = () => {
-  haptic("light");
+  useEffect(() => {
+    if (step === 3 && assessmentMode === null) {
+      updateOnboarding({ currentStep: 2 });
+    }
+  }, [assessmentMode, step, updateOnboarding]);
 
-  // Если пришли с "Пройти позже" на Preferences — возвращаемся сразу на выбор теста
-  if (step === 4 && assessmentMode === "skipped") {
-    setAssessmentMode(null);
-    prevStep(); // 4 → 3
-    prevStep(); // 3 → 2
-    return;
-  }
+  const beginAssessment = (
+    mode: Exclude<AssessmentMode, "skipped" | null>
+  ) => {
+    updateOnboarding({
+      assessmentMode: mode,
+      currentStep: 3,
+      assessedLevel: null,
+      selfReportedLevel: null,
+      levelTestAnswers: {},
+      levelTestScore: 0,
+      externalTestResult: null,
+    });
+  };
 
-  if (step === 3) {
-    setAssessmentMode(null);
-  }
+  const handleBack = () => {
+    haptic("light");
 
-  prevStep();
-};
+    if (step === 4 && assessmentMode) {
+      updateOnboarding({ assessmentMode: null, currentStep: 2 });
+      return;
+    }
+
+    if (step === 3) {
+      updateOnboarding({ assessmentMode: null, currentStep: 2 });
+      return;
+    }
+
+    prevStep();
+  };
 
   const handleLevelComplete = (level: CEFRLevel, score: number) => {
     setAssessedLevel(level, score);
   };
 
-  const handleUploadComplete = (level: CEFRLevel, source: string) => {
-    // score = 0, потому что это не наш тест, а внешний результат
-    setAssessedLevel(level, 0);
-    setAssessmentMode(null);
-    nextStep(); // переходим к Preferences
+  const handleExternalResult = (result: ExternalTestResult) => {
+    updateOnboarding({
+      assessedLevel: result.cefrLevel,
+      levelTestScore: 0,
+      externalTestResult: result,
+      currentStep: 4,
+    });
   };
 
   const renderStep = () => {
@@ -98,66 +117,62 @@ const handleBack = () => {
           />
         );
 
-case 2:
-  return (
-    <LevelTestPromptStep
-      onStartQuick={() => {
-        setAssessmentMode("quick");
-        nextStep();
-      }}
-      onStartFull={() => {
-        setAssessmentMode("full");
-        nextStep();
-      }}
-      onUploadResults={() => {
-        setAssessmentMode("upload");
-        nextStep();
-      }}
-onSkip={() => {
-  setAssessmentMode("skipped");
-  nextStep(); // → 3
-  nextStep(); // → 4
-}}
-    />
-  );
+      case 2:
+        return (
+          <LevelTestPromptStep
+            onStartQuick={() => beginAssessment("quick")}
+            onStartFull={() => beginAssessment("full")}
+            onUploadResults={() => beginAssessment("external")}
+            onSkip={() => {
+              updateOnboarding({
+                assessmentMode: "skipped",
+                currentStep: 4,
+                assessedLevel: "A1",
+                selfReportedLevel: null,
+                levelTestAnswers: {},
+                levelTestScore: 0,
+                externalTestResult: null,
+              });
+            }}
+          />
+        );
 
-case 3:
-  if (assessmentMode === "upload") {
-    return (
-      <UploadTestResultsStep
-        onComplete={handleUploadComplete}
-        onBack={() => {
-          setAssessmentMode(null);
-          prevStep();
-        }}
-      />
-    );
-  }
+      case 3:
+        if (assessmentMode === "external") {
+          return (
+            <UploadTestResultsStep
+              targetLanguage={onboarding.targetLanguage}
+              initialResult={onboarding.externalTestResult}
+              onComplete={handleExternalResult}
+            />
+          );
+        }
 
-  if (assessmentMode === "quick" || assessmentMode === "full") {
-    return (
-      <LevelTestStep
-        answers={onboarding.levelTestAnswers}
-        questions={getLevelTestQuestions(
-          onboarding.targetLanguage,
-          assessmentMode === "quick" ? "quick" : "full"
-        )}
-        onAnswer={setLevelTestAnswer}
-        onComplete={handleLevelComplete}
-        onContinue={nextStep}
-      />
-    );
-  }
+        if (assessmentMode === "quick" || assessmentMode === "full") {
+          return (
+            <LevelTestStep
+              answers={onboarding.levelTestAnswers}
+              questions={getLevelTestQuestions(
+                onboarding.targetLanguage,
+                assessmentMode
+              )}
+              onAnswer={setLevelTestAnswer}
+              onComplete={handleLevelComplete}
+              onContinue={nextStep}
+            />
+          );
+        }
 
-  // Сюда не должны попадать (skipped / null)
-  return null;
+        return null;
 
       case 4:
         return (
           <PreferencesStep
             dailyGoalMinutes={onboarding.dailyGoalMinutes}
+            courseDuration={onboarding.courseDuration}
             tutorPersonality={onboarding.tutorPersonality}
             onSelectDaily={setDailyGoalMinutes}
+            onSelectDuration={setCourseDuration}
             onSelectTutor={setTutorPersonality}
             onContinue={nextStep}
           />
@@ -203,7 +218,7 @@ case 3:
               <button
                 onClick={handleBack}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-foreground active:scale-95"
-                aria-label="Go back"
+                aria-label="Назад"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>

@@ -22,6 +22,8 @@ const initialOnboarding: OnboardingState = {
   selfReportedLevel: null,
   levelTestAnswers: {},
   levelTestScore: 0,
+  assessmentMode: null,
+  externalTestResult: null,
   goals: [],
   prioritySkills: [],
   dailyGoalMinutes: null,
@@ -157,35 +159,40 @@ export const useAppStore = create<AppStore>()(
       completeOnboarding: () =>
         set((state) => {
           const o = state.onboarding;
-          // создаём первый курс из онбординга, если курсов ещё нет
-          if (
-            state.courses.length === 0 &&
-            o.targetLanguage &&
-            o.dailyGoalMinutes &&
-            o.courseDuration &&
-            o.tutorPersonality
-          ) {
-            const id = `course_${Date.now()}`;
-            const course: Course = {
-              id,
-              nativeLanguage: o.nativeLanguage ?? "ru",
-              targetLanguage: o.targetLanguage,
-              assessedLevel: o.assessedLevel,
-              dailyGoalMinutes: o.dailyGoalMinutes,
-              courseDuration: o.courseDuration,
-              tutorPersonality: o.tutorPersonality,
-              favoriteTopics: o.favoriteTopics,
-              goals: o.goals,
-              createdAt: Date.now(),
-            };
+          if (state.courses.length > 0) {
             return {
               onboarding: { ...o, isComplete: true },
-              courses: [course],
-              activeCourseId: id,
             };
           }
+
+          if (
+            !o.nativeLanguage ||
+            !o.targetLanguage ||
+            !o.dailyGoalMinutes ||
+            !o.courseDuration ||
+            !o.tutorPersonality
+          ) {
+            return state;
+          }
+
+          const id = `course_${Date.now()}`;
+          const course: Course = {
+            id,
+            nativeLanguage: o.nativeLanguage,
+            targetLanguage: o.targetLanguage,
+            assessedLevel: o.assessedLevel,
+            dailyGoalMinutes: o.dailyGoalMinutes,
+            courseDuration: o.courseDuration,
+            tutorPersonality: o.tutorPersonality,
+            favoriteTopics: o.favoriteTopics,
+            goals: o.goals,
+            createdAt: Date.now(),
+          };
+
           return {
             onboarding: { ...o, isComplete: true },
+            courses: [course],
+            activeCourseId: id,
           };
         }),
 
@@ -245,6 +252,40 @@ export const useAppStore = create<AppStore>()(
     }),
     {
       name: "speakly-storage",
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AppStore> & {
+          onboarding?: Partial<OnboardingState>;
+        };
+
+        return {
+          ...state,
+          courses: state.courses ?? [],
+          activeCourseId: state.activeCourseId ?? null,
+          onboarding: {
+            ...initialOnboarding,
+            ...state.onboarding,
+            assessmentMode: state.onboarding?.assessmentMode ?? null,
+            externalTestResult: state.onboarding?.externalTestResult ?? null,
+          },
+        } as AppStore;
+      },
+      merge: (persistedState, currentState) => {
+        const state = persistedState as Partial<AppStore> & {
+          onboarding?: Partial<OnboardingState>;
+        };
+
+        return {
+          ...currentState,
+          ...state,
+          courses: state.courses ?? currentState.courses,
+          activeCourseId: state.activeCourseId ?? currentState.activeCourseId,
+          onboarding: {
+            ...initialOnboarding,
+            ...state.onboarding,
+          },
+        };
+      },
       partialize: (state) => ({
         theme: state.theme,
         onboarding: state.onboarding,

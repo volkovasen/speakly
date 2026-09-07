@@ -1,22 +1,34 @@
-import { Clock, Sparkles } from "lucide-react";
+import { Calendar, Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AI_TUTOR_PERSONALITIES, DAILY_GOALS } from "@/data/onboarding";
+import {
+  AI_TUTOR_PERSONALITIES,
+  COURSE_DURATIONS,
+  DAILY_GOALS,
+} from "@/data/onboarding";
 import { haptic } from "@/lib/telegram";
 import { cn } from "@/lib/utils";
-import type { AITutorPersonality, DailyGoalMinutes } from "@/types";
+import type {
+  AITutorPersonality,
+  CourseDuration,
+  DailyGoalMinutes,
+} from "@/types";
 
 interface PreferencesStepProps {
   dailyGoalMinutes: DailyGoalMinutes | null;
+  courseDuration: CourseDuration | null;
   tutorPersonality: AITutorPersonality | null;
   onSelectDaily: (minutes: DailyGoalMinutes) => void;
+  onSelectDuration: (duration: CourseDuration) => void;
   onSelectTutor: (personality: AITutorPersonality) => void;
   onContinue: () => void;
 }
 
 export function PreferencesStep({
   dailyGoalMinutes,
+  courseDuration,
   tutorPersonality,
   onSelectDaily,
+  onSelectDuration,
   onSelectTutor,
   onContinue,
 }: PreferencesStepProps) {
@@ -62,8 +74,34 @@ export function PreferencesStep({
           </div>
         </section>
 
+        <section>
+          <div className="mb-3 flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Длительность первого курса</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {COURSE_DURATIONS.map((duration) => (
+              <button
+                key={duration.days}
+                onClick={() => {
+                  haptic("selection");
+                  onSelectDuration(duration.days);
+                }}
+                className={cn(
+                  "rounded-xl border px-3 py-3 text-sm font-medium transition-all active:scale-95",
+                  courseDuration === duration.days
+                    ? "border-indigo-500 bg-indigo-500 text-white shadow-glow"
+                    : "border-border bg-card shadow-soft hover:border-indigo-200"
+                )}
+              >
+                {duration.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* AI Tutor Personality Section */}
-          <section>
+        <section>
             <div className="mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold">Характер ИИ-преподавателя</h3>
@@ -93,14 +131,14 @@ export function PreferencesStep({
                 </button>
               ))}
             </div>
-          </section>
+        </section>
       </div>
 
       <div className="pt-6">
         <Button
           size="xl"
           className="w-full"
-          disabled={!dailyGoalMinutes || !tutorPersonality}
+          disabled={!dailyGoalMinutes || !courseDuration || !tutorPersonality}
           onClick={() => {
             haptic("light");
             onContinue();
