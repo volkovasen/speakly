@@ -1,5 +1,5 @@
 import type { CEFRLevel, LevelTestQuestion, TargetLanguage } from "@/types";
-import { indexToLevel, levelToIndex } from "@/lib/telegram";
+import { levelToIndex } from "@/lib/telegram";
 
 const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
   {
@@ -62,11 +62,11 @@ const ENGLISH_LEVEL_TEST_QUESTIONS: LevelTestQuestion[] = [
     prompt: "If I ___ more time, I would have finished the project.",
     options: [
       { id: "a", label: "have", isCorrect: false },
-      { id: "b", label: "had", isCorrect: true, levelHint: "B2" },
+      { id: "b", label: "had had", isCorrect: true, levelHint: "B2" },
       { id: "c", label: "will have", isCorrect: false },
       { id: "d", label: "would have", isCorrect: false },
     ],
-    explanation: "В третьем условном предложении в if-части используется Past Perfect: If I had...",
+    explanation: "В третьем условном предложении в if-части используется Past Perfect: If I had had...",
   },
   {
     id: "q6",
@@ -219,36 +219,43 @@ export function calculateAssessedLevel(
 ): { level: CEFRLevel; score: number; correctCount: number } {
   const scoredQuestions = questions.filter((q) => q.type !== "self-assessment");
   let correctCount = 0;
-  const levelScores: number[] = [];
 
   for (const question of scoredQuestions) {
     const answerId = answers[question.id];
     const selected = question.options.find((o) => o.id === answerId);
     if (selected?.isCorrect) {
       correctCount++;
-      if (selected.levelHint) {
-        levelScores.push(levelToIndex(selected.levelHint));
-      }
     }
   }
 
-  const selfAnswer = answers["q1"];
-  const selfOption = questions[0].options.find((o) => o.id === selfAnswer);
-  const selfLevel = selfOption?.levelHint ? levelToIndex(selfOption.levelHint) : 2;
+  const selfQuestion = questions.find((q) => q.type === "self-assessment");
+  const selfOption = selfQuestion?.options.find(
+    (option) => option.id === answers[selfQuestion.id]
+  );
+  const selfLevel = selfOption?.levelHint ?? "A0";
+  const score = scoredQuestions.length
+    ? Math.round((correctCount / scoredQuestions.length) * 100)
+    : 0;
 
-  let assessedIndex: number;
-  if (correctCount === 0) {
-    assessedIndex = selfLevel;
+  let level: CEFRLevel;
+  if (scoredQuestions.length === 0) {
+    level = selfLevel;
+  } else if (correctCount === 0) {
+    level = levelToIndex(selfLevel) <= levelToIndex("A1") ? selfLevel : "A1";
   } else {
-    const avgCorrectLevel =
-      levelScores.reduce((a, b) => a + b, 0) / levelScores.length;
-    assessedIndex = Math.round((avgCorrectLevel * 0.7 + selfLevel * 0.3));
+    const testedLevels = Array.from(
+      new Set(scoredQuestions.map((question) => question.difficulty))
+    ).sort((a, b) => levelToIndex(a) - levelToIndex(b));
+    const levelIndex = Math.min(
+      testedLevels.length - 1,
+      Math.ceil((correctCount / scoredQuestions.length) * testedLevels.length) - 1
+    );
+
+    level = testedLevels[levelIndex] ?? "A1";
   }
 
-  const score = Math.round((correctCount / scoredQuestions.length) * 100);
-
   return {
-    level: indexToLevel(assessedIndex),
+    level,
     score,
     correctCount,
   };
